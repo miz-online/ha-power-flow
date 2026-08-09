@@ -10,6 +10,7 @@ from homeassistant.helpers import selector
 
 from .const import (
     CONF_ADD_ANOTHER,
+    CONF_DEVICE_TYPE,
     CONF_DEVICES,
     CONF_EDIT_DEVICES,
     CONF_LEFTOVER_NAME,
@@ -24,6 +25,8 @@ from .const import (
     DEFAULT_LEFTOVER_NAME,
     DEFAULT_MQTT_EXPOSE_CONNECTIONS,
     DEFAULT_TARGET,
+    DEVICE_TYPE_MULTI,
+    DEVICE_TYPE_SINGLE,
     DOMAIN,
 )
 
@@ -32,58 +35,27 @@ class PowerFlowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 2
 
     def __init__(self) -> None:
-        self._config_data: dict[str, str | bool] = {}
-        self._devices: list[dict[str, str | bool | None]] = []
+        pass
 
     async def async_step_user(self, user_input: dict | None = None) -> FlowResult:
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            self._config_data = {
-                CONF_LEFTOVER_NAME: user_input.get(CONF_LEFTOVER_NAME, DEFAULT_LEFTOVER_NAME),
-                CONF_MQTT_ROOT: user_input.get(CONF_MQTT_ROOT, ""),
-                CONF_MQTT_EXPOSE_CONNECTIONS: user_input.get(
-                    CONF_MQTT_EXPOSE_CONNECTIONS, DEFAULT_MQTT_EXPOSE_CONNECTIONS
-                ),
-            }
-            return await self.async_step_flow()
+            return self.async_create_entry(
+                title="Power Flow",
+                data={
+                    CONF_DEVICES: [],
+                    CONF_LEFTOVER_NAME: user_input.get(CONF_LEFTOVER_NAME, DEFAULT_LEFTOVER_NAME),
+                    CONF_MQTT_ROOT: user_input.get(CONF_MQTT_ROOT, ""),
+                    CONF_MQTT_EXPOSE_CONNECTIONS: user_input.get(
+                        CONF_MQTT_EXPOSE_CONNECTIONS, DEFAULT_MQTT_EXPOSE_CONNECTIONS
+                    ),
+                },
+            )
 
         return self.async_show_form(
             step_id="user",
             data_schema=self._get_config_schema(user_input),
-            errors=errors,
-        )
-
-    async def async_step_flow(self, user_input: dict | None = None) -> FlowResult:
-        errors: dict[str, str] = {}
-
-        if user_input is not None:
-            try:
-                device = self._validate_device_input(user_input)
-            except ValueError as err:
-                errors["base"] = err.args[0]
-            else:
-                self._devices.append(device)
-                if user_input.get(CONF_ADD_ANOTHER, False):
-                    return self.async_show_form(
-                        step_id="flow",
-                        data_schema=self._get_flow_schema({CONF_ADD_ANOTHER: True}),
-                        errors={},
-                    )
-
-                return self.async_create_entry(
-                    title="Power Flow",
-                    data={
-                        CONF_DEVICES: self._devices,
-                        CONF_LEFTOVER_NAME: self._config_data[CONF_LEFTOVER_NAME],
-                        CONF_MQTT_ROOT: self._config_data[CONF_MQTT_ROOT],
-                        CONF_MQTT_EXPOSE_CONNECTIONS: self._config_data[CONF_MQTT_EXPOSE_CONNECTIONS],
-                    },
-                )
-
-        return self.async_show_form(
-            step_id="flow",
-            data_schema=self._get_flow_schema(user_input),
             errors=errors,
         )
 
@@ -118,6 +90,7 @@ class PowerFlowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def _get_flow_schema(user_input: dict | None = None) -> vol.Schema:
         defaults = {
             CONF_NAME: "",
+            CONF_DEVICE_TYPE: DEVICE_TYPE_SINGLE,
             CONF_TARGET: DEFAULT_TARGET,
             CONF_POWER_SENSOR: "",
             CONF_INVERT_POWER_SENSOR: DEFAULT_INVERT_POWER_SENSOR,
@@ -135,6 +108,17 @@ class PowerFlowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return vol.Schema(
             {
                 vol.Required(CONF_NAME, default=defaults[CONF_NAME]): str,
+                vol.Required(
+                    CONF_DEVICE_TYPE,
+                    default=defaults[CONF_DEVICE_TYPE],
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=[
+                            {"value": DEVICE_TYPE_SINGLE, "label": "Single power sensor"},
+                            {"value": DEVICE_TYPE_MULTI, "label": "Import/export sensors"},
+                        ]
+                    )
+                ),
                 vol.Optional(CONF_TARGET, default=defaults[CONF_TARGET]): str,
                 vol.Optional(
                     CONF_POWER_SENSOR,
@@ -163,32 +147,40 @@ class PowerFlowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             raise ValueError("name_required")
 
         target = user_input.get(CONF_TARGET, DEFAULT_TARGET) or DEFAULT_TARGET
+        device_type = user_input.get(CONF_DEVICE_TYPE, DEVICE_TYPE_SINGLE)
         power_sensor = user_input.get(CONF_POWER_SENSOR) or None
         invert_power_sensor = user_input.get(CONF_INVERT_POWER_SENSOR, DEFAULT_INVERT_POWER_SENSOR)
         power_import_sensor = user_input.get(CONF_POWER_IMPORT_SENSOR) or None
         power_export_sensor = user_input.get(CONF_POWER_EXPORT_SENSOR) or None
 
-        if power_sensor and (power_import_sensor or power_export_sensor):
-            raise ValueError("device_conflict")
-
-        if power_sensor:
+        if device_type == DEVICE_TYPE_SINGLE:
+            if not power_sensor:
+                raise ValueError("single_sensor_required")
+            if power_import_sensor or power_export_sensor:
+                raise ValueError("device_conflict")
             return {
                 CONF_NAME: name,
                 CONF_TARGET: target,
+                CONF_DEVICE_TYPE: device_type,
                 CONF_POWER_SENSOR: power_sensor,
                 CONF_INVERT_POWER_SENSOR: bool(invert_power_sensor),
             }
 
-        if not power_import_sensor or not power_export_sensor:
-            raise ValueError("device_missing")
+        if device_type == DEVICE_TYPE_MULTI:
+            if not power_import_sensor or not power_export_sensor:
+                raise ValueError("multi_sensor_required")
+            if power_sensor:
+                raise ValueError("device_conflict")
+            return {
+                CONF_NAME: name,
+                CONF_TARGET: target,
+                CONF_DEVICE_TYPE: device_type,
+                CONF_POWER_IMPORT_SENSOR: power_import_sensor,
+                CONF_POWER_EXPORT_SENSOR: power_export_sensor,
+                CONF_INVERT_POWER_SENSOR: bool(invert_power_sensor),
+            }
 
-        return {
-            CONF_NAME: name,
-            CONF_TARGET: target,
-            CONF_POWER_IMPORT_SENSOR: power_import_sensor,
-            CONF_POWER_EXPORT_SENSOR: power_export_sensor,
-            CONF_INVERT_POWER_SENSOR: bool(invert_power_sensor),
-        }
+        raise ValueError("invalid_device_type")
 
 
 class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
@@ -248,7 +240,7 @@ class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
                 if user_input.get(CONF_ADD_ANOTHER, False):
                     return self.async_show_form(
                         step_id="flow",
-                        data_schema=self._get_flow_schema(self._next_device_defaults()),
+                        data_schema=PowerFlowConfigFlow._get_flow_schema(self._next_device_defaults()),
                         errors={},
                     )
 
@@ -265,7 +257,7 @@ class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
 
         return self.async_show_form(
             step_id="flow",
-            data_schema=self._get_flow_schema(self._next_device_defaults()),
+            data_schema=PowerFlowConfigFlow._get_flow_schema(self._next_device_defaults()),
             errors=errors,
         )
 
@@ -290,48 +282,6 @@ class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
                     default=defaults[CONF_MQTT_EXPOSE_CONNECTIONS],
                 ): bool,
                 vol.Optional(CONF_EDIT_DEVICES, default=defaults[CONF_EDIT_DEVICES]): bool,
-            }
-        )
-
-    @staticmethod
-    def _get_flow_schema(user_input: dict | None = None) -> vol.Schema:
-        defaults = {
-            CONF_NAME: "",
-            CONF_TARGET: DEFAULT_TARGET,
-            CONF_POWER_SENSOR: "",
-            CONF_INVERT_POWER_SENSOR: DEFAULT_INVERT_POWER_SENSOR,
-            CONF_POWER_IMPORT_SENSOR: "",
-            CONF_POWER_EXPORT_SENSOR: "",
-            CONF_ADD_ANOTHER: True,
-        }
-        if user_input is not None:
-            defaults.update(user_input)
-
-        for key in (CONF_POWER_SENSOR, CONF_POWER_IMPORT_SENSOR, CONF_POWER_EXPORT_SENSOR):
-            if defaults.get(key) is None:
-                defaults[key] = ""
-
-        return vol.Schema(
-            {
-                vol.Required(CONF_NAME, default=defaults[CONF_NAME]): str,
-                vol.Optional(CONF_TARGET, default=defaults[CONF_TARGET]): str,
-                vol.Optional(
-                    CONF_POWER_SENSOR,
-                    default=defaults[CONF_POWER_SENSOR],
-                ): selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor")),
-                vol.Optional(
-                    CONF_INVERT_POWER_SENSOR,
-                    default=defaults[CONF_INVERT_POWER_SENSOR],
-                ): bool,
-                vol.Optional(
-                    CONF_POWER_IMPORT_SENSOR,
-                    default=defaults[CONF_POWER_IMPORT_SENSOR],
-                ): selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor")),
-                vol.Optional(
-                    CONF_POWER_EXPORT_SENSOR,
-                    default=defaults[CONF_POWER_EXPORT_SENSOR],
-                ): selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor")),
-                vol.Optional(CONF_ADD_ANOTHER, default=defaults[CONF_ADD_ANOTHER]): bool,
             }
         )
 

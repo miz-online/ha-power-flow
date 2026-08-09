@@ -17,6 +17,7 @@
       "mqtt_expose_connections": "Expose connections via MQTT",
       "name": "Connection/group name",
       "target": "Target",
+      "device_type": "Device type",
       "power_sensor": "Power sensor",
       "invert_power_sensor": "Invert power sensor value",
       "power_import_sensor": "Import sensor",
@@ -26,7 +27,9 @@
     "error": {
       "name_required": "Please enter a name.",
       "device_conflict": "Use either a single power sensor or import/export sensors, not both.",
-      "device_missing": "Please configure a single power sensor or both import and export sensors."
+      "single_sensor_required": "Select a single power sensor for this device.",
+      "multi_sensor_required": "Select both import and export sensors for this device.",
+      "invalid_device_type": "Select a valid device type."
     }
   },
   "options": {
@@ -47,6 +50,7 @@
       "edit_devices": "Edit flow entries",
       "name": "Connection/group name",
       "target": "Target",
+      "device_type": "Device type",
       "power_sensor": "Power sensor",
       "invert_power_sensor": "Invert power sensor value",
       "power_import_sensor": "Import sensor",
@@ -56,7 +60,9 @@
     "error": {
       "name_required": "Please enter a name.",
       "device_conflict": "Use either a single power sensor or import/export sensors, not both.",
-      "device_missing": "Please configure a single power sensor or both import and export sensors."
+      "single_sensor_required": "Select a single power sensor for this device.",
+      "multi_sensor_required": "Select both import and export sensors for this device.",
+      "invalid_device_type": "Select a valid device type."
     }
   }
 }
