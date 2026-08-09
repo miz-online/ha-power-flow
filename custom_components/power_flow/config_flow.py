@@ -5,7 +5,6 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_NAME
 from homeassistant.core import callback
-from homeassistant.data_entry_flow import FlowResult
 
 try:
     from homeassistant.helpers import selector
@@ -41,7 +40,7 @@ class PowerFlowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         pass
 
-    async def async_step_user(self, user_input: dict | None = None) -> FlowResult:
+    async def async_step_user(self, user_input: dict | None = None):
         errors: dict[str, str] = {}
 
         if user_input is not None:
@@ -204,7 +203,7 @@ class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
             self.config_entry.data.get(CONF_DEVICES, [])
         )
 
-    async def async_step_init(self, user_input: dict | None = None) -> FlowResult:
+    async def async_step_init(self, user_input: dict | None = None):
         errors: dict[str, str] = {}
 
         if user_input is not None:
@@ -239,7 +238,7 @@ class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
             errors=errors,
         )
 
-    async def async_step_flow(self, user_input: dict | None = None) -> FlowResult:
+    async def async_step_flow(self, user_input: dict | None = None):
         errors: dict[str, str] = {}
 
         if user_input is not None:
