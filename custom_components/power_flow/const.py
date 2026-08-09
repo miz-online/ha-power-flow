@@ -9,6 +9,7 @@ CONF_POWER_EXPORT_SENSOR = "power_export_sensor"
 CONF_LEFTOVER_NAME = "leftover_name"
 CONF_MQTT_ROOT = "mqtt_root"
 CONF_MQTT_EXPOSE_CONNECTIONS = "mqtt_expose_connections"
+CONF_EDIT_DEVICES = "edit_devices"
 CONF_FLOWS_TEXT = "flows_text"
 CONF_ADD_ANOTHER = "add_another"
 
