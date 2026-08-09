@@ -13,10 +13,6 @@ try:
     from homeassistant.const import POWER_WATT
 except ImportError:
     POWER_WATT = "W"
-try:
-    from homeassistant.const import POWER_WATT
-except ImportError:
-    POWER_WATT = "W"
 
 from .const import DATA_COORDINATOR, DOMAIN, DEFAULT_TARGET
 from .data import PowerFlowCoordinator
