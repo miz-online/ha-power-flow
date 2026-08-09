@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from homeassistant.components.sensor import SensorEntity, SensorStateClass
-from homeassistant.const import POWER_WATT
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -9,6 +8,15 @@ try:
     from homeassistant.components.sensor import SensorDeviceClass
 except ImportError:
     from homeassistant.const import DEVICE_CLASS_POWER as SensorDeviceClass
+
+try:
+    from homeassistant.const import POWER_WATT
+except ImportError:
+    POWER_WATT = "W"
+try:
+    from homeassistant.const import POWER_WATT
+except ImportError:
+    POWER_WATT = "W"
 
 from .const import DATA_COORDINATOR, DOMAIN, DEFAULT_TARGET
 from .data import PowerFlowCoordinator
