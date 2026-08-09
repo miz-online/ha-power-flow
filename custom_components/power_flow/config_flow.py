@@ -4,9 +4,12 @@ import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.const import CONF_NAME
-from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers import selector
+
+try:
+    from homeassistant.helpers import selector
+except ImportError:
+    selector = None
 
 from .const import (
     CONF_ADD_ANOTHER,
@@ -105,25 +108,33 @@ class PowerFlowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if defaults.get(key) is None:
                 defaults[key] = ""
 
-        return vol.Schema(
-            {
-                vol.Required(CONF_NAME, default=defaults[CONF_NAME]): str,
-                vol.Required(
-                    CONF_DEVICE_TYPE,
-                    default=defaults[CONF_DEVICE_TYPE],
-                ): selector.SelectSelector(
+        device_type_schema = vol.In([DEVICE_TYPE_SINGLE, DEVICE_TYPE_MULTI])
+        power_sensor_schema = str
+        if selector is not None:
+            if hasattr(selector, "SelectSelector") and hasattr(selector, "SelectSelectorConfig"):
+                device_type_schema = selector.SelectSelector(
                     selector.SelectSelectorConfig(
                         options=[
                             {"value": DEVICE_TYPE_SINGLE, "label": "Single power sensor"},
                             {"value": DEVICE_TYPE_MULTI, "label": "Import/export sensors"},
                         ]
                     )
-                ),
+                )
+            if hasattr(selector, "EntitySelector") and hasattr(selector, "EntitySelectorConfig"):
+                power_sensor_schema = selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor"))
+
+        return vol.Schema(
+            {
+                vol.Required(CONF_NAME, default=defaults[CONF_NAME]): str,
+                vol.Required(
+                    CONF_DEVICE_TYPE,
+                    default=defaults[CONF_DEVICE_TYPE],
+                ): device_type_schema,
                 vol.Optional(CONF_TARGET, default=defaults[CONF_TARGET]): str,
                 vol.Optional(
                     CONF_POWER_SENSOR,
                     default=defaults[CONF_POWER_SENSOR],
-                ): selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor")),
+                ): power_sensor_schema,
                 vol.Optional(
                     CONF_INVERT_POWER_SENSOR,
                     default=defaults[CONF_INVERT_POWER_SENSOR],
@@ -131,11 +142,11 @@ class PowerFlowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(
                     CONF_POWER_IMPORT_SENSOR,
                     default=defaults[CONF_POWER_IMPORT_SENSOR],
-                ): selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor")),
+                ): power_sensor_schema,
                 vol.Optional(
                     CONF_POWER_EXPORT_SENSOR,
                     default=defaults[CONF_POWER_EXPORT_SENSOR],
-                ): selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor")),
+                ): power_sensor_schema,
                 vol.Optional(CONF_ADD_ANOTHER, default=defaults[CONF_ADD_ANOTHER]): bool,
             }
         )
