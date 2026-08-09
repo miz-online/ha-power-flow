@@ -1,0 +1,60 @@
+{
+  "name": "Power Flow",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Power Flow Einstellungen",
+        "description": "Konfigurieren Sie globale Leistungsfluss-Einstellungen, bevor Sie einzelne Flusseinträge hinzufügen."
+      },
+      "flow": {
+        "title": "Leistungsfluss-Eintrag hinzufügen",
+        "description": "Definieren Sie eine Verbindung oder Gruppe mit Sensoreinträgen."
+      }
+    },
+    "data": {
+      "leftover_name": "Name des Netzrestes",
+      "mqtt_root": "MQTT-Stammthema",
+      "mqtt_expose_connections": "Verbindungen über MQTT veröffentlichen",
+      "name": "Name der Verbindung/Gruppe",
+      "target": "Ziel",
+      "power_sensor": "Leistungssensor",
+      "power_import_sensor": "Importsensor",
+      "power_export_sensor": "Exportsensor",
+      "add_another": "Weiteren Fluss hinzufügen"
+    },
+    "error": {
+      "name_required": "Bitte geben Sie einen Namen ein.",
+      "device_conflict": "Verwenden Sie entweder einen einzelnen Leistungssensor oder Import-/Exportsensoren, nicht beides.",
+      "device_missing": "Bitte konfigurieren Sie entweder einen einzelnen Leistungssensor oder sowohl Import- als auch Exportsensoren."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Power Flow Optionen",
+        "description": "Bearbeiten Sie globale Einstellungen oder wählen Sie Flusseinträge zum Modifizieren aus."
+      },
+      "flow": {
+        "title": "Leistungsfluss-Eintrag bearbeiten",
+        "description": "Fügen Sie einen Fluss hinzu oder ändern Sie einen bestehenden Eintrag."
+      }
+    },
+    "data": {
+      "leftover_name": "Name des Netzrestes",
+      "mqtt_root": "MQTT-Stammthema",
+      "mqtt_expose_connections": "Verbindungen über MQTT veröffentlichen",
+      "edit_devices": "Flusseinträge bearbeiten",
+      "name": "Name der Verbindung/Gruppe",
+      "target": "Ziel",
+      "power_sensor": "Leistungssensor",
+      "power_import_sensor": "Importsensor",
+      "power_export_sensor": "Exportsensor",
+      "add_another": "Weiteren Fluss hinzufügen"
+    },
+    "error": {
+      "name_required": "Bitte geben Sie einen Namen ein.",
+      "device_conflict": "Verwenden Sie entweder einen einzelnen Leistungssensor oder Import-/Exportsensoren, nicht beides.",
+      "device_missing": "Bitte konfigurieren Sie entweder einen einzelnen Leistungssensor oder sowohl Import- als auch Exportsensoren."
+    }
+  }
+}

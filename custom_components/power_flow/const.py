@@ -10,6 +10,7 @@ CONF_LEFTOVER_NAME = "leftover_name"
 CONF_MQTT_ROOT = "mqtt_root"
 CONF_MQTT_EXPOSE_CONNECTIONS = "mqtt_expose_connections"
 CONF_FLOWS_TEXT = "flows_text"
+CONF_ADD_ANOTHER = "add_another"
 
 DEFAULT_TARGET = "grid"
 DEFAULT_LEFTOVER_NAME = "Grid leftover"
