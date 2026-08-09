@@ -12,6 +12,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .const import (
     CONF_DEVICES,
+    CONF_INVERT_POWER_SENSOR,
     CONF_LEFTOVER_NAME,
     CONF_MQTT_EXPOSE_CONNECTIONS,
     CONF_MQTT_ROOT,
@@ -32,6 +33,7 @@ class FlowDefinition:
     name: str
     target: str
     power_sensor: str | None = None
+    invert_power_sensor: bool = False
     power_import_sensor: str | None = None
     power_export_sensor: str | None = None
 
@@ -105,6 +107,7 @@ class PowerFlowCoordinator(DataUpdateCoordinator):
                     power_sensor=item.get(CONF_POWER_SENSOR),
                     power_import_sensor=item.get(CONF_POWER_IMPORT_SENSOR),
                     power_export_sensor=item.get(CONF_POWER_EXPORT_SENSOR),
+                    invert_power_sensor=item.get(CONF_INVERT_POWER_SENSOR, False),
                 )
             )
 
@@ -129,7 +132,11 @@ class PowerFlowCoordinator(DataUpdateCoordinator):
             export_value = self._extract_value(flow.power_export_sensor)
             return import_value - export_value
 
-        return self._extract_value(flow.power_sensor)
+        value = self._extract_value(flow.power_sensor)
+        if flow.invert_power_sensor:
+            return -value
+
+        return value
 
     @staticmethod
     def _slug_topic_part(value: str) -> str:

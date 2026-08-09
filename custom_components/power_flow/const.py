@@ -10,12 +10,14 @@ CONF_LEFTOVER_NAME = "leftover_name"
 CONF_MQTT_ROOT = "mqtt_root"
 CONF_MQTT_EXPOSE_CONNECTIONS = "mqtt_expose_connections"
 CONF_EDIT_DEVICES = "edit_devices"
+CONF_INVERT_POWER_SENSOR = "invert_power_sensor"
 CONF_FLOWS_TEXT = "flows_text"
 CONF_ADD_ANOTHER = "add_another"
 
 DEFAULT_TARGET = "grid"
 DEFAULT_LEFTOVER_NAME = "Grid leftover"
 DEFAULT_MQTT_EXPOSE_CONNECTIONS = False
+DEFAULT_INVERT_POWER_SENSOR = False
 
 PLATFORMS = ["sensor"]
 DATA_COORDINATOR = "coordinator"

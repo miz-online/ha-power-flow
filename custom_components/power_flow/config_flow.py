@@ -18,7 +18,9 @@ from .const import (
     CONF_POWER_EXPORT_SENSOR,
     CONF_POWER_IMPORT_SENSOR,
     CONF_POWER_SENSOR,
+    CONF_INVERT_POWER_SENSOR,
     CONF_TARGET,
+    DEFAULT_INVERT_POWER_SENSOR,
     DEFAULT_LEFTOVER_NAME,
     DEFAULT_MQTT_EXPOSE_CONNECTIONS,
     DEFAULT_TARGET,
@@ -31,7 +33,7 @@ class PowerFlowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     def __init__(self) -> None:
         self._config_data: dict[str, str | bool] = {}
-        self._devices: list[dict[str, str | None]] = []
+        self._devices: list[dict[str, str | bool | None]] = []
 
     async def async_step_user(self, user_input: dict | None = None) -> FlowResult:
         errors: dict[str, str] = {}
@@ -118,6 +120,7 @@ class PowerFlowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             CONF_NAME: "",
             CONF_TARGET: DEFAULT_TARGET,
             CONF_POWER_SENSOR: None,
+            CONF_INVERT_POWER_SENSOR: DEFAULT_INVERT_POWER_SENSOR,
             CONF_POWER_IMPORT_SENSOR: None,
             CONF_POWER_EXPORT_SENSOR: None,
             CONF_ADD_ANOTHER: True,
@@ -133,6 +136,10 @@ class PowerFlowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_POWER_SENSOR,
                     default=defaults[CONF_POWER_SENSOR],
                 ): selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor")),
+                vol.Optional(
+                    CONF_INVERT_POWER_SENSOR,
+                    default=defaults[CONF_INVERT_POWER_SENSOR],
+                ): bool,
                 vol.Optional(
                     CONF_POWER_IMPORT_SENSOR,
                     default=defaults[CONF_POWER_IMPORT_SENSOR],
@@ -153,6 +160,7 @@ class PowerFlowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         target = user_input.get(CONF_TARGET, DEFAULT_TARGET) or DEFAULT_TARGET
         power_sensor = user_input.get(CONF_POWER_SENSOR) or None
+        invert_power_sensor = user_input.get(CONF_INVERT_POWER_SENSOR, DEFAULT_INVERT_POWER_SENSOR)
         power_import_sensor = user_input.get(CONF_POWER_IMPORT_SENSOR) or None
         power_export_sensor = user_input.get(CONF_POWER_EXPORT_SENSOR) or None
 
@@ -164,9 +172,10 @@ class PowerFlowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_NAME: name,
                 CONF_TARGET: target,
                 CONF_POWER_SENSOR: power_sensor,
+                CONF_INVERT_POWER_SENSOR: bool(invert_power_sensor),
             }
 
-        if not power_import_sensor and not power_export_sensor:
+        if not power_import_sensor or not power_export_sensor:
             raise ValueError("device_missing")
 
         return {
@@ -174,6 +183,7 @@ class PowerFlowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             CONF_TARGET: target,
             CONF_POWER_IMPORT_SENSOR: power_import_sensor,
             CONF_POWER_EXPORT_SENSOR: power_export_sensor,
+            CONF_INVERT_POWER_SENSOR: bool(invert_power_sensor),
         }
 
 
@@ -181,8 +191,8 @@ class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
     def __init__(self, config_entry) -> None:
         self.config_entry = config_entry
         self._config_data: dict[str, str | bool] = {}
-        self._devices: list[dict[str, str | None]] = []
-        self._pending_devices: list[dict[str, str | None]] = list(
+        self._devices: list[dict[str, str | bool | None]] = []
+        self._pending_devices: list[dict[str, str | bool | None]] = list(
             self.config_entry.data.get(CONF_DEVICES, [])
         )
 
@@ -285,6 +295,7 @@ class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
             CONF_NAME: "",
             CONF_TARGET: DEFAULT_TARGET,
             CONF_POWER_SENSOR: None,
+            CONF_INVERT_POWER_SENSOR: DEFAULT_INVERT_POWER_SENSOR,
             CONF_POWER_IMPORT_SENSOR: None,
             CONF_POWER_EXPORT_SENSOR: None,
             CONF_ADD_ANOTHER: True,
@@ -300,6 +311,10 @@ class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
                     CONF_POWER_SENSOR,
                     default=defaults[CONF_POWER_SENSOR],
                 ): selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor")),
+                vol.Optional(
+                    CONF_INVERT_POWER_SENSOR,
+                    default=defaults[CONF_INVERT_POWER_SENSOR],
+                ): bool,
                 vol.Optional(
                     CONF_POWER_IMPORT_SENSOR,
                     default=defaults[CONF_POWER_IMPORT_SENSOR],

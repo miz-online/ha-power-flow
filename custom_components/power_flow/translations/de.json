@@ -18,6 +18,7 @@
       "name": "Name der Verbindung/Gruppe",
       "target": "Ziel",
       "power_sensor": "Leistungssensor",
+      "invert_power_sensor": "Leistungssensorwert invertieren",
       "power_import_sensor": "Importsensor",
       "power_export_sensor": "Exportsensor",
       "add_another": "Weiteren Fluss hinzufügen"
@@ -47,6 +48,7 @@
       "name": "Name der Verbindung/Gruppe",
       "target": "Ziel",
       "power_sensor": "Leistungssensor",
+      "invert_power_sensor": "Leistungssensorwert invertieren",
       "power_import_sensor": "Importsensor",
       "power_export_sensor": "Exportsensor",
       "add_another": "Weiteren Fluss hinzufügen"

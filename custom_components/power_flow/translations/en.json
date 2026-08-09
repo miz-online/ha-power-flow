@@ -18,6 +18,7 @@
       "name": "Connection/group name",
       "target": "Target",
       "power_sensor": "Power sensor",
+      "invert_power_sensor": "Invert power sensor value",
       "power_import_sensor": "Import sensor",
       "power_export_sensor": "Export sensor",
       "add_another": "Add another flow entry"
@@ -47,6 +48,7 @@
       "name": "Connection/group name",
       "target": "Target",
       "power_sensor": "Power sensor",
+      "invert_power_sensor": "Invert power sensor value",
       "power_import_sensor": "Import sensor",
       "power_export_sensor": "Export sensor",
       "add_another": "Add another flow entry"
