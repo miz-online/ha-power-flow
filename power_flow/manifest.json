@@ -1,0 +1,14 @@
+{
+  "domain": "power_flow",
+  "name": "Power Flow",
+  "version": "1.0.0",
+  "config_flow": true,
+  "documentation": "https://github.com/yourname/power_flow",
+  "requirements": [],
+  "dependencies": ["mqtt"],
+  "after_dependencies": [],
+  "integration_type": "hub",
+  "iot_class": "calculated",
+  "quality_scale": "bronze",
+  "codeowners": []
+}

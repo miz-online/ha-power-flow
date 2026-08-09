@@ -1,0 +1,7 @@
+{
+  "name": "Power Flow",
+  "content_in_root": false,
+  "homeassistant": "2024.10.0",
+  "hacs": "1.0.0",
+  "filename": "power_flow/manifest.json"
+}
