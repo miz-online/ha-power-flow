@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from homeassistant.components.sensor import SensorEntity, SensorStateClass
-from homeassistant.const import DEVICE_CLASS_POWER, POWER_WATT
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
+from homeassistant.const import POWER_WATT
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -45,8 +45,8 @@ class PowerFlowGroupSensor(CoordinatorEntity, SensorEntity):
         return POWER_WATT
 
     @property
-    def device_class(self) -> str:
-        return DEVICE_CLASS_POWER
+    def device_class(self) -> SensorDeviceClass:
+        return SensorDeviceClass.POWER
 
     @property
     def state_class(self) -> str:
@@ -87,8 +87,8 @@ class PowerFlowConnectionSensor(CoordinatorEntity, SensorEntity):
         return POWER_WATT
 
     @property
-    def device_class(self) -> str:
-        return DEVICE_CLASS_POWER
+    def device_class(self) -> SensorDeviceClass:
+        return SensorDeviceClass.POWER
 
     @property
     def state_class(self) -> str:
