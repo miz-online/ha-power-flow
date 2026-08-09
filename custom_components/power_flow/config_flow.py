@@ -119,14 +119,18 @@ class PowerFlowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         defaults = {
             CONF_NAME: "",
             CONF_TARGET: DEFAULT_TARGET,
-            CONF_POWER_SENSOR: None,
+            CONF_POWER_SENSOR: "",
             CONF_INVERT_POWER_SENSOR: DEFAULT_INVERT_POWER_SENSOR,
-            CONF_POWER_IMPORT_SENSOR: None,
-            CONF_POWER_EXPORT_SENSOR: None,
+            CONF_POWER_IMPORT_SENSOR: "",
+            CONF_POWER_EXPORT_SENSOR: "",
             CONF_ADD_ANOTHER: True,
         }
         if user_input is not None:
             defaults.update(user_input)
+
+        for key in (CONF_POWER_SENSOR, CONF_POWER_IMPORT_SENSOR, CONF_POWER_EXPORT_SENSOR):
+            if defaults.get(key) is None:
+                defaults[key] = ""
 
         return vol.Schema(
             {
@@ -294,14 +298,18 @@ class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
         defaults = {
             CONF_NAME: "",
             CONF_TARGET: DEFAULT_TARGET,
-            CONF_POWER_SENSOR: None,
+            CONF_POWER_SENSOR: "",
             CONF_INVERT_POWER_SENSOR: DEFAULT_INVERT_POWER_SENSOR,
-            CONF_POWER_IMPORT_SENSOR: None,
-            CONF_POWER_EXPORT_SENSOR: None,
+            CONF_POWER_IMPORT_SENSOR: "",
+            CONF_POWER_EXPORT_SENSOR: "",
             CONF_ADD_ANOTHER: True,
         }
         if user_input is not None:
             defaults.update(user_input)
+
+        for key in (CONF_POWER_SENSOR, CONF_POWER_IMPORT_SENSOR, CONF_POWER_EXPORT_SENSOR):
+            if defaults.get(key) is None:
+                defaults[key] = ""
 
         return vol.Schema(
             {
