@@ -18,9 +18,12 @@ from .const import DATA_COORDINATOR, DOMAIN, DEFAULT_TARGET
 from .data import PowerFlowCoordinator
 
 
-def _sensor_device_info() -> DeviceInfo:
+def _sensor_device_info(coordinator) -> DeviceInfo:
+    # Hub device info uses the config entry id so a hub Device is created
+    # for each ConfigEntry. `coordinator` is a PowerFlowCoordinator and
+    # provides the entry id.
     return DeviceInfo(
-        identifiers={(DOMAIN, DOMAIN)},
+        identifiers={(DOMAIN, coordinator.entry.entry_id)},
         name="Power Flow",
         manufacturer="Custom",
         model="Power Flow Integration",
@@ -38,6 +41,11 @@ class PowerFlowGroupSensor(CoordinatorEntity, SensorEntity):
         if self.is_leftover:
             return self.coordinator.leftover_name
         return f"{self.group_name} Power"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, str]:
+        # Provide a quick link to the integration options for this config entry
+        return {"configure_url": f"/config/integrations/config_entry/{self.coordinator.entry.entry_id}/options"}
 
     @property
     def unique_id(self) -> str:
@@ -67,7 +75,8 @@ class PowerFlowGroupSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def device_info(self) -> DeviceInfo:
-        return _sensor_device_info()
+        # Attach group sensors to the hub device for this config entry
+        return _sensor_device_info(self.coordinator)
 
 
 class PowerFlowConnectionSensor(CoordinatorEntity, SensorEntity):
@@ -113,10 +122,22 @@ class PowerFlowConnectionSensor(CoordinatorEntity, SensorEntity):
             "source": self.source,
             "target": self.target,
         }
+        
 
     @property
     def device_info(self) -> DeviceInfo:
-        return _sensor_device_info()
+        # Create a per-logical-device DeviceInfo for the source device and link
+        # it to the hub via `via_device` using the config entry id.
+        safe_source = self.source.strip().lower().replace(" ", "_")
+        hub_identifier = (DOMAIN, self.coordinator.entry.entry_id)
+        device_identifier = (DOMAIN, f"{self.coordinator.entry.entry_id}_device_{safe_source}")
+        return DeviceInfo(
+            identifiers={device_identifier},
+            name=self.source,
+            via_device=hub_identifier,
+            manufacturer="Custom",
+            model="Power Flow Device",
+        )
 
 
 async def async_setup_entry(hass, entry, async_add_entities):

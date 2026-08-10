@@ -202,6 +202,7 @@ class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
         self._pending_devices: list[dict[str, str | bool | None]] = list(
             self._config_entry.data.get(CONF_DEVICES, [])
         )
+        self._editing_index: int | None = None
 
     async def async_step_init(self, user_input: dict | None = None):
         errors: dict[str, str] = {}
@@ -228,9 +229,11 @@ class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
                     CONF_MQTT_EXPOSE_CONNECTIONS, DEFAULT_MQTT_EXPOSE_CONNECTIONS
                 ),
             }
-            self._devices = []
-            self._pending_devices = list(self._config_entry.data.get(CONF_DEVICES, []))
-            return await self.async_step_flow()
+            # Start with the existing devices list so we can edit in-place
+            self._devices = list(self._config_entry.data.get(CONF_DEVICES, []))
+            self._pending_devices = list(self._devices)
+            self._editing_index = None
+            return await self.async_step_edit_list()
 
         return self.async_show_form(
             step_id="init",
@@ -247,7 +250,12 @@ class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
             except ValueError as err:
                 errors["base"] = err.args[0]
             else:
-                self._devices.append(device)
+                # If editing an existing device, replace it in-place
+                if self._editing_index is not None and 0 <= self._editing_index < len(self._devices):
+                    self._devices[self._editing_index] = device
+                    self._editing_index = None
+                else:
+                    self._devices.append(device)
                 if user_input.get(CONF_ADD_ANOTHER, False):
                     return self.async_show_form(
                         step_id="flow",
@@ -268,7 +276,7 @@ class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
 
         return self.async_show_form(
             step_id="flow",
-            data_schema=PowerFlowConfigFlow._get_flow_schema(self._next_device_defaults()),
+            data_schema=PowerFlowConfigFlow._get_flow_schema(self._current_edit_defaults()),
             errors=errors,
         )
 
@@ -300,3 +308,33 @@ class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
         if self._pending_devices:
             return self._pending_devices.pop(0)
         return {}
+
+    def _current_edit_defaults(self) -> dict[str, str | None]:
+        if self._editing_index is not None and 0 <= self._editing_index < len(self._devices):
+            return self._devices[self._editing_index]
+        return {}
+
+    async def async_step_edit_list(self, user_input: dict | None = None):
+        """Show a list of existing devices to edit or allow adding a new device."""
+        errors: dict[str, str] = {}
+
+        device_names = [d.get(CONF_NAME, "") for d in self._devices]
+        options = ["__add_new__"] + device_names
+
+        if user_input is not None:
+            choice = user_input.get("select_device")
+            if choice == "__add_new__":
+                self._editing_index = None
+                return await self.async_step_flow()
+
+            # Find the first device matching the chosen name
+            for idx, dev in enumerate(self._devices):
+                if dev.get(CONF_NAME) == choice:
+                    self._editing_index = idx
+                    return await self.async_step_flow()
+
+            errors["base"] = "invalid_selection"
+
+        default = device_names[0] if device_names else "__add_new__"
+        schema = vol.Schema({vol.Required("select_device", default=default): vol.In(options)})
+        return self.async_show_form(step_id="edit_list", data_schema=schema, errors=errors)
