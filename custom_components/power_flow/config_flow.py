@@ -196,11 +196,11 @@ class PowerFlowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
     def __init__(self, config_entry) -> None:
-        self.config_entry = config_entry
+        self._config_entry = config_entry
         self._config_data: dict[str, str | bool] = {}
         self._devices: list[dict[str, str | bool | None]] = []
         self._pending_devices: list[dict[str, str | bool | None]] = list(
-            self.config_entry.data.get(CONF_DEVICES, [])
+            self._config_entry.data.get(CONF_DEVICES, [])
         )
 
     async def async_step_init(self, user_input: dict | None = None):
@@ -209,9 +209,9 @@ class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
         if user_input is not None:
             if not user_input.get(CONF_EDIT_DEVICES, False):
                 self.hass.config_entries.async_update_entry(
-                    self.config_entry,
+                    self._config_entry,
                     data={
-                        CONF_DEVICES: self.config_entry.data.get(CONF_DEVICES, []),
+                        CONF_DEVICES: self._config_entry.data.get(CONF_DEVICES, []),
                         CONF_LEFTOVER_NAME: user_input.get(CONF_LEFTOVER_NAME, DEFAULT_LEFTOVER_NAME),
                         CONF_MQTT_ROOT: user_input.get(CONF_MQTT_ROOT, ""),
                         CONF_MQTT_EXPOSE_CONNECTIONS: user_input.get(
@@ -229,7 +229,7 @@ class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
                 ),
             }
             self._devices = []
-            self._pending_devices = list(self.config_entry.data.get(CONF_DEVICES, []))
+            self._pending_devices = list(self._config_entry.data.get(CONF_DEVICES, []))
             return await self.async_step_flow()
 
         return self.async_show_form(
@@ -256,7 +256,7 @@ class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
                     )
 
                 self.hass.config_entries.async_update_entry(
-                    self.config_entry,
+                    self._config_entry,
                     data={
                         CONF_DEVICES: self._devices,
                         CONF_LEFTOVER_NAME: self._config_data[CONF_LEFTOVER_NAME],
@@ -274,9 +274,9 @@ class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
 
     def _get_options_schema(self, user_input: dict | None = None) -> vol.Schema:
         defaults = {
-            CONF_LEFTOVER_NAME: self.config_entry.data.get(CONF_LEFTOVER_NAME, DEFAULT_LEFTOVER_NAME),
-            CONF_MQTT_ROOT: self.config_entry.data.get(CONF_MQTT_ROOT, ""),
-            CONF_MQTT_EXPOSE_CONNECTIONS: self.config_entry.data.get(
+            CONF_LEFTOVER_NAME: self._config_entry.data.get(CONF_LEFTOVER_NAME, DEFAULT_LEFTOVER_NAME),
+            CONF_MQTT_ROOT: self._config_entry.data.get(CONF_MQTT_ROOT, ""),
+            CONF_MQTT_EXPOSE_CONNECTIONS: self._config_entry.data.get(
                 CONF_MQTT_EXPOSE_CONNECTIONS, DEFAULT_MQTT_EXPOSE_CONNECTIONS
             ),
             CONF_EDIT_DEVICES: False,
