@@ -27,6 +27,7 @@ def _sensor_device_info(coordinator) -> DeviceInfo:
         name="Power Flow",
         manufacturer="Custom",
         model="Power Flow Integration",
+        configuration_url=f"/config/integrations/config_entry/{coordinator.entry.entry_id}/options",
     )
 
 

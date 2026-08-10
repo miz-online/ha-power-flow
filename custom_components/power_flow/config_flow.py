@@ -203,6 +203,7 @@ class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
             self._config_entry.data.get(CONF_DEVICES, [])
         )
         self._editing_index: int | None = None
+        self._pending_device_type: str | None = None
 
     async def async_step_init(self, user_input: dict | None = None):
         errors: dict[str, str] = {}
@@ -244,6 +245,10 @@ class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
     async def async_step_flow(self, user_input: dict | None = None):
         errors: dict[str, str] = {}
 
+        # Ensure device type selected first
+        if self._pending_device_type is None:
+            return await self.async_step_select_type()
+
         if user_input is not None:
             try:
                 device = PowerFlowConfigFlow._validate_device_input(user_input)
@@ -274,11 +279,51 @@ class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
                 )
                 return self.async_create_entry(title="", data={})
 
+        # Build a schema tailored to the selected device type
+        defaults = self._current_edit_defaults()
+        device_type = self._pending_device_type or defaults.get(CONF_DEVICE_TYPE, DEVICE_TYPE_SINGLE)
+
+        # Start from the full flow schema and remove irrelevant fields
+        full_schema = PowerFlowConfigFlow._get_flow_schema(defaults)
+        schema_dict = dict(full_schema.schema)
+
+        if device_type == DEVICE_TYPE_SINGLE:
+            # Remove import/export fields
+            schema_dict.pop(CONF_POWER_IMPORT_SENSOR, None)
+            schema_dict.pop(CONF_POWER_EXPORT_SENSOR, None)
+        else:
+            # Remove single power sensor field
+            schema_dict.pop(CONF_POWER_SENSOR, None)
+
+        tailored_schema = vol.Schema(schema_dict)
+
         return self.async_show_form(
             step_id="flow",
-            data_schema=PowerFlowConfigFlow._get_flow_schema(self._current_edit_defaults()),
+            data_schema=tailored_schema,
             errors=errors,
         )
+
+    async def async_step_select_type(self, user_input: dict | None = None):
+        """Ask whether the device is single-sensor or import/export pair."""
+        errors: dict[str, str] = {}
+
+        device_type_schema = vol.In([DEVICE_TYPE_SINGLE, DEVICE_TYPE_MULTI])
+        if selector is not None and hasattr(selector, "SelectSelector") and hasattr(selector, "SelectSelectorConfig"):
+            device_type_schema = selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=[
+                        {"value": DEVICE_TYPE_SINGLE, "label": "Single power sensor"},
+                        {"value": DEVICE_TYPE_MULTI, "label": "Import/export sensors"},
+                    ]
+                )
+            )
+
+        if user_input is not None:
+            self._pending_device_type = user_input.get(CONF_DEVICE_TYPE, DEVICE_TYPE_SINGLE)
+            return await self.async_step_flow()
+
+        schema = vol.Schema({vol.Required(CONF_DEVICE_TYPE, default=DEVICE_TYPE_SINGLE): device_type_schema})
+        return self.async_show_form(step_id="select_type", data_schema=schema, errors=errors)
 
     def _get_options_schema(self, user_input: dict | None = None) -> vol.Schema:
         defaults = {
