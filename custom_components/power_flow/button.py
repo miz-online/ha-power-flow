@@ -44,3 +44,8 @@ class PowerFlowAddButton(ButtonEntity):
             coordinator._flows = coordinator._normalize_flows(new_data.get(CONF_DEVICES, []))
             coordinator._setup_listeners()
             await coordinator.async_refresh()
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities) -> None:
+    """Set up the Add Device button for a config entry."""
+    async_add_entities([PowerFlowAddButton(hass, entry)])
