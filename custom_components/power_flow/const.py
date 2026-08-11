@@ -22,5 +22,5 @@ DEFAULT_LEFTOVER_NAME = "Grid leftover"
 DEFAULT_MQTT_EXPOSE_CONNECTIONS = False
 DEFAULT_INVERT_POWER_SENSOR = False
 
-PLATFORMS = ["sensor", "button"]
+PLATFORMS = ["sensor"]
 DATA_COORDINATOR = "coordinator"

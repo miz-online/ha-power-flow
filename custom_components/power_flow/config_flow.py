@@ -12,24 +12,16 @@ except ImportError:
     selector = None
 
 from .const import (
-    CONF_ADD_ANOTHER,
-    CONF_DEVICE_TYPE,
     CONF_DEVICES,
-    CONF_EDIT_DEVICES,
     CONF_FLOWS_TEXT,
-    CONF_LEFTOVER_NAME,
-    CONF_MQTT_EXPOSE_CONNECTIONS,
-    CONF_MQTT_ROOT,
-    CONF_POWER_EXPORT_SENSOR,
-    CONF_POWER_IMPORT_SENSOR,
+    CONF_NAME,
+    CONF_TARGET,
+    CONF_DEVICE_TYPE,
     CONF_POWER_SENSOR,
     CONF_INVERT_POWER_SENSOR,
-    CONF_TARGET,
-    DEFAULT_INVERT_POWER_SENSOR,
-    DEFAULT_LEFTOVER_NAME,
-    DEFAULT_MQTT_EXPOSE_CONNECTIONS,
+    CONF_POWER_IMPORT_SENSOR,
+    CONF_POWER_EXPORT_SENSOR,
     DEFAULT_TARGET,
-    DEVICE_TYPE_MULTI,
     DEVICE_TYPE_SINGLE,
     DOMAIN,
 )
@@ -37,9 +29,6 @@ from .const import (
 
 class PowerFlowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 2
-
-    def __init__(self) -> None:
-        pass
 
     async def async_step_user(self, user_input: dict | None = None):
         errors: dict[str, str] = {}
@@ -51,11 +40,6 @@ class PowerFlowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 title="Power Flow",
                 data={
                     CONF_DEVICES: devices,
-                    CONF_LEFTOVER_NAME: user_input.get(CONF_LEFTOVER_NAME, DEFAULT_LEFTOVER_NAME),
-                    CONF_MQTT_ROOT: user_input.get(CONF_MQTT_ROOT, ""),
-                    CONF_MQTT_EXPOSE_CONNECTIONS: user_input.get(
-                        CONF_MQTT_EXPOSE_CONNECTIONS, DEFAULT_MQTT_EXPOSE_CONNECTIONS
-                    ),
                 },
             )
 
@@ -75,9 +59,6 @@ class PowerFlowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def _get_config_schema(user_input: dict | None = None) -> vol.Schema:
         defaults = {
             CONF_FLOWS_TEXT: "",
-            CONF_LEFTOVER_NAME: DEFAULT_LEFTOVER_NAME,
-            CONF_MQTT_ROOT: "",
-            CONF_MQTT_EXPOSE_CONNECTIONS: DEFAULT_MQTT_EXPOSE_CONNECTIONS,
         }
         if user_input is not None:
             defaults.update(user_input)
@@ -89,74 +70,7 @@ class PowerFlowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return vol.Schema(
             {
                 vol.Optional(CONF_FLOWS_TEXT, default=defaults[CONF_FLOWS_TEXT]): flows_text_schema,
-                vol.Optional(CONF_LEFTOVER_NAME, default=defaults[CONF_LEFTOVER_NAME]): str,
-                vol.Optional(CONF_MQTT_ROOT, default=defaults[CONF_MQTT_ROOT]): str,
-                vol.Optional(
-                    CONF_MQTT_EXPOSE_CONNECTIONS,
-                    default=defaults[CONF_MQTT_EXPOSE_CONNECTIONS],
-                ): bool,
-            }
-        )
 
-    @staticmethod
-    def _get_flow_schema(user_input: dict | None = None) -> vol.Schema:
-        defaults = {
-            CONF_NAME: "",
-            CONF_DEVICE_TYPE: DEVICE_TYPE_SINGLE,
-            CONF_TARGET: DEFAULT_TARGET,
-            CONF_POWER_SENSOR: "",
-            CONF_INVERT_POWER_SENSOR: DEFAULT_INVERT_POWER_SENSOR,
-            CONF_POWER_IMPORT_SENSOR: "",
-            CONF_POWER_EXPORT_SENSOR: "",
-            CONF_ADD_ANOTHER: True,
-        }
-        if user_input is not None:
-            defaults.update(user_input)
-
-        for key in (CONF_POWER_SENSOR, CONF_POWER_IMPORT_SENSOR, CONF_POWER_EXPORT_SENSOR):
-            if defaults.get(key) is None:
-                defaults[key] = ""
-
-        device_type_schema = vol.In([DEVICE_TYPE_SINGLE, DEVICE_TYPE_MULTI])
-        power_sensor_schema = str
-        if selector is not None:
-            if hasattr(selector, "SelectSelector") and hasattr(selector, "SelectSelectorConfig"):
-                device_type_schema = selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=[
-                            {"value": DEVICE_TYPE_SINGLE, "label": "Single power sensor"},
-                            {"value": DEVICE_TYPE_MULTI, "label": "Import/export sensors"},
-                        ]
-                    )
-                )
-            if hasattr(selector, "EntitySelector") and hasattr(selector, "EntitySelectorConfig"):
-                power_sensor_schema = selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor"))
-
-        return vol.Schema(
-            {
-                vol.Required(CONF_NAME, default=defaults[CONF_NAME]): str,
-                vol.Required(
-                    CONF_DEVICE_TYPE,
-                    default=defaults[CONF_DEVICE_TYPE],
-                ): device_type_schema,
-                vol.Optional(CONF_TARGET, default=defaults[CONF_TARGET]): str,
-                vol.Optional(
-                    CONF_POWER_SENSOR,
-                    default=defaults[CONF_POWER_SENSOR],
-                ): power_sensor_schema,
-                vol.Optional(
-                    CONF_INVERT_POWER_SENSOR,
-                    default=defaults[CONF_INVERT_POWER_SENSOR],
-                ): bool,
-                vol.Optional(
-                    CONF_POWER_IMPORT_SENSOR,
-                    default=defaults[CONF_POWER_IMPORT_SENSOR],
-                ): power_sensor_schema,
-                vol.Optional(
-                    CONF_POWER_EXPORT_SENSOR,
-                    default=defaults[CONF_POWER_EXPORT_SENSOR],
-                ): power_sensor_schema,
-                vol.Optional(CONF_ADD_ANOTHER, default=defaults[CONF_ADD_ANOTHER]): bool,
             }
         )
 
@@ -226,148 +140,37 @@ class PowerFlowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
     def __init__(self, config_entry) -> None:
         self._config_entry = config_entry
-        self._config_data: dict[str, str | bool] = {}
-        self._devices: list[dict[str, str | bool | None]] = []
-        self._pending_devices: list[dict[str, str | bool | None]] = list(
-            self._config_entry.data.get(CONF_DEVICES, [])
-        )
-        self._editing_index: int | None = None
-        self._pending_device_type: str | None = None
 
     async def async_step_init(self, user_input: dict | None = None):
         errors: dict[str, str] = {}
 
         if user_input is not None:
             flows_text = user_input.get(CONF_FLOWS_TEXT, "") or ""
-            new_devices = PowerFlowConfigFlow._devices_from_names(flows_text)
-            existing_devices = list(self._config_entry.data.get(CONF_DEVICES, []))
-            devices = existing_devices + new_devices
+            devices = self._devices_from_names(flows_text, self._config_entry.data.get(CONF_DEVICES, []))
+            self.hass.config_entries.async_update_entry(
+                self._config_entry,
+                data={
+                    CONF_DEVICES: devices,
+                },
+            )
+            coordinator = self.hass.data.get(DOMAIN, {}).get(self._config_entry.entry_id)
+            if coordinator is not None:
+                coordinator._flows = coordinator._normalize_flows(devices)
+                coordinator._setup_listeners()
+                await coordinator.async_refresh()
+            return self.async_create_entry(title="", data={})
 
-            if not user_input.get(CONF_EDIT_DEVICES, False):
-                self.hass.config_entries.async_update_entry(
-                    self._config_entry,
-                    data={
-                        CONF_DEVICES: devices,
-                        CONF_LEFTOVER_NAME: user_input.get(CONF_LEFTOVER_NAME, DEFAULT_LEFTOVER_NAME),
-                        CONF_MQTT_ROOT: user_input.get(CONF_MQTT_ROOT, ""),
-                        CONF_MQTT_EXPOSE_CONNECTIONS: user_input.get(
-                            CONF_MQTT_EXPOSE_CONNECTIONS, DEFAULT_MQTT_EXPOSE_CONNECTIONS
-                        ),
-                    },
-                )
-                return self.async_create_entry(title="", data={})
-
-            self._config_data = {
-                CONF_LEFTOVER_NAME: user_input.get(CONF_LEFTOVER_NAME, DEFAULT_LEFTOVER_NAME),
-                CONF_MQTT_ROOT: user_input.get(CONF_MQTT_ROOT, ""),
-                CONF_MQTT_EXPOSE_CONNECTIONS: user_input.get(
-                    CONF_MQTT_EXPOSE_CONNECTIONS, DEFAULT_MQTT_EXPOSE_CONNECTIONS
-                ),
-            }
-            # Start with the existing devices list plus any placeholders from flows_text
-            self._devices = devices
-            self._pending_devices = list(self._devices)
-            self._editing_index = None
-            return await self.async_step_edit_list()
-
+        current_devices = self._config_entry.data.get(CONF_DEVICES, [])
+        flows_text = "\n".join(dev.get(CONF_NAME, "") for dev in current_devices)
         return self.async_show_form(
             step_id="init",
-            data_schema=self._get_options_schema(user_input),
+            data_schema=self._get_options_schema({CONF_FLOWS_TEXT: flows_text}),
             errors=errors,
         )
-
-    async def async_step_flow(self, user_input: dict | None = None):
-        errors: dict[str, str] = {}
-
-        # Ensure device type selected first
-        if self._pending_device_type is None:
-            return await self.async_step_select_type()
-
-        if user_input is not None:
-            try:
-                device = PowerFlowConfigFlow._validate_device_input(user_input)
-            except ValueError as err:
-                errors["base"] = err.args[0]
-            else:
-                # If editing an existing device, replace it in-place
-                if self._editing_index is not None and 0 <= self._editing_index < len(self._devices):
-                    self._devices[self._editing_index] = device
-                    self._editing_index = None
-                else:
-                    self._devices.append(device)
-                if user_input.get(CONF_ADD_ANOTHER, False):
-                    return self.async_show_form(
-                        step_id="flow",
-                        data_schema=PowerFlowConfigFlow._get_flow_schema(self._next_device_defaults()),
-                        errors={},
-                    )
-
-                self.hass.config_entries.async_update_entry(
-                    self._config_entry,
-                    data={
-                        CONF_DEVICES: self._devices,
-                        CONF_LEFTOVER_NAME: self._config_data[CONF_LEFTOVER_NAME],
-                        CONF_MQTT_ROOT: self._config_data[CONF_MQTT_ROOT],
-                        CONF_MQTT_EXPOSE_CONNECTIONS: self._config_data[CONF_MQTT_EXPOSE_CONNECTIONS],
-                    },
-                )
-                return self.async_create_entry(title="", data={})
-
-        # Build a schema tailored to the selected device type
-        defaults = self._current_edit_defaults()
-        device_type = self._pending_device_type or defaults.get(CONF_DEVICE_TYPE, DEVICE_TYPE_SINGLE)
-
-        # Start from the full flow schema and remove irrelevant fields
-        full_schema = PowerFlowConfigFlow._get_flow_schema(defaults)
-        schema_dict = dict(full_schema.schema)
-
-        if device_type == DEVICE_TYPE_SINGLE:
-            # Remove import/export fields
-            schema_dict.pop(CONF_POWER_IMPORT_SENSOR, None)
-            schema_dict.pop(CONF_POWER_EXPORT_SENSOR, None)
-        else:
-            # Remove single power sensor field
-            schema_dict.pop(CONF_POWER_SENSOR, None)
-
-        tailored_schema = vol.Schema(schema_dict)
-
-        return self.async_show_form(
-            step_id="flow",
-            data_schema=tailored_schema,
-            errors=errors,
-        )
-
-    async def async_step_select_type(self, user_input: dict | None = None):
-        """Ask whether the device is single-sensor or import/export pair."""
-        errors: dict[str, str] = {}
-
-        device_type_schema = vol.In([DEVICE_TYPE_SINGLE, DEVICE_TYPE_MULTI])
-        if selector is not None and hasattr(selector, "SelectSelector") and hasattr(selector, "SelectSelectorConfig"):
-            device_type_schema = selector.SelectSelector(
-                selector.SelectSelectorConfig(
-                    options=[
-                        {"value": DEVICE_TYPE_SINGLE, "label": "Single power sensor"},
-                        {"value": DEVICE_TYPE_MULTI, "label": "Import/export sensors"},
-                    ]
-                )
-            )
-
-        if user_input is not None:
-            self._pending_device_type = user_input.get(CONF_DEVICE_TYPE, DEVICE_TYPE_SINGLE)
-            return await self.async_step_flow()
-
-        schema = vol.Schema({vol.Required(CONF_DEVICE_TYPE, default=DEVICE_TYPE_SINGLE): device_type_schema})
-        return self.async_show_form(step_id="select_type", data_schema=schema, errors=errors)
 
     def _get_options_schema(self, user_input: dict | None = None) -> vol.Schema:
         defaults = {
             CONF_FLOWS_TEXT: "",
-            CONF_LEFTOVER_NAME: self._config_entry.data.get(CONF_LEFTOVER_NAME, DEFAULT_LEFTOVER_NAME),
-            CONF_MQTT_ROOT: self._config_entry.data.get(CONF_MQTT_ROOT, ""),
-            CONF_MQTT_EXPOSE_CONNECTIONS: self._config_entry.data.get(
-                CONF_MQTT_EXPOSE_CONNECTIONS, DEFAULT_MQTT_EXPOSE_CONNECTIONS
-            ),
-            CONF_EDIT_DEVICES: False,
         }
         if user_input is not None:
             defaults.update(user_input)
@@ -379,47 +182,21 @@ class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
         return vol.Schema(
             {
                 vol.Optional(CONF_FLOWS_TEXT, default=defaults[CONF_FLOWS_TEXT]): flows_text_schema,
-                vol.Optional(CONF_LEFTOVER_NAME, default=defaults[CONF_LEFTOVER_NAME]): str,
-                vol.Optional(CONF_MQTT_ROOT, default=defaults[CONF_MQTT_ROOT]): str,
-                vol.Optional(
-                    CONF_MQTT_EXPOSE_CONNECTIONS,
-                    default=defaults[CONF_MQTT_EXPOSE_CONNECTIONS],
-                ): bool,
-                vol.Optional(CONF_EDIT_DEVICES, default=defaults[CONF_EDIT_DEVICES]): bool,
             }
         )
 
-    def _next_device_defaults(self) -> dict[str, str | None]:
-        if self._pending_devices:
-            return self._pending_devices.pop(0)
-        return {}
-
-    def _current_edit_defaults(self) -> dict[str, str | None]:
-        if self._editing_index is not None and 0 <= self._editing_index < len(self._devices):
-            return self._devices[self._editing_index]
-        return {}
-
-    async def async_step_edit_list(self, user_input: dict | None = None):
-        """Show a list of existing devices to edit or allow adding a new device."""
-        errors: dict[str, str] = {}
-
-        device_names = [d.get(CONF_NAME, "") for d in self._devices]
-        options = ["__add_new__"] + device_names
-
-        if user_input is not None:
-            choice = user_input.get("select_device")
-            if choice == "__add_new__":
-                self._editing_index = None
-                return await self.async_step_flow()
-
-            # Find the first device matching the chosen name
-            for idx, dev in enumerate(self._devices):
-                if dev.get(CONF_NAME) == choice:
-                    self._editing_index = idx
-                    return await self.async_step_flow()
-
-            errors["base"] = "invalid_selection"
-
-        default = device_names[0] if device_names else "__add_new__"
-        schema = vol.Schema({vol.Required("select_device", default=default): vol.In(options)})
-        return self.async_show_form(step_id="edit_list", data_schema=schema, errors=errors)
+    @staticmethod
+    def _devices_from_names(flows_text: str, existing_devices: list[dict[str, str | bool | None]]) -> list[dict[str, str | bool | None]]:
+        existing_by_name = {
+            device.get(CONF_NAME, ""): device
+            for device in existing_devices
+            if device.get(CONF_NAME)
+        }
+        names = [name.strip() for name in flows_text.splitlines() if name.strip()]
+        devices: list[dict[str, str | bool | None]] = []
+        for name in names:
+            if name in existing_by_name:
+                devices.append(existing_by_name[name])
+            else:
+                devices.append(PowerFlowConfigFlow._device_placeholder(name))
+        return devices
