@@ -65,7 +65,25 @@ class PowerFlowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         flows_text_schema = str
         if selector is not None and hasattr(selector, "TextSelector") and hasattr(selector, "TextSelectorConfig"):
-            flows_text_schema = selector.TextSelector(selector.TextSelectorConfig(multiline=True))
+            try:
+                flows_text_schema = selector.TextSelector(
+                    selector.TextSelectorConfig(multiline=True)
+                )
+            except TypeError:
+                if hasattr(selector, "TextSelectorType"):
+                    try:
+                        flows_text_schema = selector.TextSelector(
+                            selector.TextSelectorConfig(
+                                type=selector.TextSelectorType.TEXT,
+                                multiline=True,
+                            )
+                        )
+                    except Exception:
+                        flows_text_schema = selector.TextSelector(selector.TextSelectorConfig())
+                else:
+                    flows_text_schema = selector.TextSelector(selector.TextSelectorConfig())
+            except Exception:
+                flows_text_schema = selector.TextSelector(selector.TextSelectorConfig())
 
         return vol.Schema(
             {
@@ -177,7 +195,25 @@ class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
 
         flows_text_schema = str
         if selector is not None and hasattr(selector, "TextSelector") and hasattr(selector, "TextSelectorConfig"):
-            flows_text_schema = selector.TextSelector(selector.TextSelectorConfig(multiline=True))
+            try:
+                flows_text_schema = selector.TextSelector(
+                    selector.TextSelectorConfig(multiline=True)
+                )
+            except TypeError:
+                if hasattr(selector, "TextSelectorType"):
+                    try:
+                        flows_text_schema = selector.TextSelector(
+                            selector.TextSelectorConfig(
+                                type=selector.TextSelectorType.TEXT,
+                                multiline=True,
+                            )
+                        )
+                    except Exception:
+                        flows_text_schema = selector.TextSelector(selector.TextSelectorConfig())
+                else:
+                    flows_text_schema = selector.TextSelector(selector.TextSelectorConfig())
+            except Exception:
+                flows_text_schema = selector.TextSelector(selector.TextSelectorConfig())
 
         return vol.Schema(
             {
