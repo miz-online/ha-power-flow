@@ -16,6 +16,7 @@ from .const import (
     CONF_DEVICE_TYPE,
     CONF_DEVICES,
     CONF_EDIT_DEVICES,
+    CONF_FLOWS_TEXT,
     CONF_LEFTOVER_NAME,
     CONF_MQTT_EXPOSE_CONNECTIONS,
     CONF_MQTT_ROOT,
@@ -44,10 +45,12 @@ class PowerFlowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
+            flows_text = user_input.get(CONF_FLOWS_TEXT, "") or ""
+            devices = PowerFlowConfigFlow._devices_from_names(flows_text)
             return self.async_create_entry(
                 title="Power Flow",
                 data={
-                    CONF_DEVICES: [],
+                    CONF_DEVICES: devices,
                     CONF_LEFTOVER_NAME: user_input.get(CONF_LEFTOVER_NAME, DEFAULT_LEFTOVER_NAME),
                     CONF_MQTT_ROOT: user_input.get(CONF_MQTT_ROOT, ""),
                     CONF_MQTT_EXPOSE_CONNECTIONS: user_input.get(
@@ -71,6 +74,7 @@ class PowerFlowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def _get_config_schema(user_input: dict | None = None) -> vol.Schema:
         defaults = {
+            CONF_FLOWS_TEXT: "",
             CONF_LEFTOVER_NAME: DEFAULT_LEFTOVER_NAME,
             CONF_MQTT_ROOT: "",
             CONF_MQTT_EXPOSE_CONNECTIONS: DEFAULT_MQTT_EXPOSE_CONNECTIONS,
@@ -78,8 +82,13 @@ class PowerFlowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             defaults.update(user_input)
 
+        flows_text_schema = str
+        if selector is not None and hasattr(selector, "TextSelector") and hasattr(selector, "TextSelectorConfig"):
+            flows_text_schema = selector.TextSelector(selector.TextSelectorConfig())
+
         return vol.Schema(
             {
+                vol.Optional(CONF_FLOWS_TEXT, default=defaults[CONF_FLOWS_TEXT]): flows_text_schema,
                 vol.Optional(CONF_LEFTOVER_NAME, default=defaults[CONF_LEFTOVER_NAME]): str,
                 vol.Optional(CONF_MQTT_ROOT, default=defaults[CONF_MQTT_ROOT]): str,
                 vol.Optional(
@@ -152,6 +161,26 @@ class PowerFlowConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     @staticmethod
+    def _parse_flow_names(flows_text: str) -> list[str]:
+        return [name.strip() for name in flows_text.splitlines() if name.strip()]
+
+    @staticmethod
+    def _device_placeholder(name: str) -> dict[str, str | bool | None]:
+        return {
+            CONF_NAME: name,
+            CONF_TARGET: DEFAULT_TARGET,
+            CONF_DEVICE_TYPE: DEVICE_TYPE_SINGLE,
+            CONF_POWER_SENSOR: "",
+            CONF_INVERT_POWER_SENSOR: False,
+            CONF_POWER_IMPORT_SENSOR: "",
+            CONF_POWER_EXPORT_SENSOR: "",
+        }
+
+    @staticmethod
+    def _devices_from_names(flows_text: str) -> list[dict[str, str | bool | None]]:
+        return [PowerFlowConfigFlow._device_placeholder(name) for name in PowerFlowConfigFlow._parse_flow_names(flows_text)]
+
+    @staticmethod
     def _validate_device_input(user_input: dict) -> dict[str, str | None]:
         name = user_input.get(CONF_NAME, "").strip()
         if not name:
@@ -209,11 +238,16 @@ class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
         errors: dict[str, str] = {}
 
         if user_input is not None:
+            flows_text = user_input.get(CONF_FLOWS_TEXT, "") or ""
+            new_devices = PowerFlowConfigFlow._devices_from_names(flows_text)
+            existing_devices = list(self._config_entry.data.get(CONF_DEVICES, []))
+            devices = existing_devices + new_devices
+
             if not user_input.get(CONF_EDIT_DEVICES, False):
                 self.hass.config_entries.async_update_entry(
                     self._config_entry,
                     data={
-                        CONF_DEVICES: self._config_entry.data.get(CONF_DEVICES, []),
+                        CONF_DEVICES: devices,
                         CONF_LEFTOVER_NAME: user_input.get(CONF_LEFTOVER_NAME, DEFAULT_LEFTOVER_NAME),
                         CONF_MQTT_ROOT: user_input.get(CONF_MQTT_ROOT, ""),
                         CONF_MQTT_EXPOSE_CONNECTIONS: user_input.get(
@@ -230,8 +264,8 @@ class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
                     CONF_MQTT_EXPOSE_CONNECTIONS, DEFAULT_MQTT_EXPOSE_CONNECTIONS
                 ),
             }
-            # Start with the existing devices list so we can edit in-place
-            self._devices = list(self._config_entry.data.get(CONF_DEVICES, []))
+            # Start with the existing devices list plus any placeholders from flows_text
+            self._devices = devices
             self._pending_devices = list(self._devices)
             self._editing_index = None
             return await self.async_step_edit_list()
@@ -327,6 +361,7 @@ class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
 
     def _get_options_schema(self, user_input: dict | None = None) -> vol.Schema:
         defaults = {
+            CONF_FLOWS_TEXT: "",
             CONF_LEFTOVER_NAME: self._config_entry.data.get(CONF_LEFTOVER_NAME, DEFAULT_LEFTOVER_NAME),
             CONF_MQTT_ROOT: self._config_entry.data.get(CONF_MQTT_ROOT, ""),
             CONF_MQTT_EXPOSE_CONNECTIONS: self._config_entry.data.get(
@@ -337,8 +372,13 @@ class PowerFlowOptionsFlowHandler(config_entries.OptionsFlow):
         if user_input is not None:
             defaults.update(user_input)
 
+        flows_text_schema = str
+        if selector is not None and hasattr(selector, "TextSelector") and hasattr(selector, "TextSelectorConfig"):
+            flows_text_schema = selector.TextSelector(selector.TextSelectorConfig())
+
         return vol.Schema(
             {
+                vol.Optional(CONF_FLOWS_TEXT, default=defaults[CONF_FLOWS_TEXT]): flows_text_schema,
                 vol.Optional(CONF_LEFTOVER_NAME, default=defaults[CONF_LEFTOVER_NAME]): str,
                 vol.Optional(CONF_MQTT_ROOT, default=defaults[CONF_MQTT_ROOT]): str,
                 vol.Optional(
